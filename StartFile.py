@@ -1,7 +1,6 @@
 import pygame
 import sys
 import random
-import math
 
 # Инициализация Pygame
 pygame.init()
@@ -18,194 +17,180 @@ GRAY = (150, 150, 150)
 YELLOW = (255, 255, 0)
 GREEN = (0, 255, 0)
 
-# Персонаж (куб)
-cube_size = 30
-cube_x = 50
-cube_y = HEIGHT - cube_size - 50  # От земли
-cube_vel_y = 0
-cube_gravity = 1.5
-cube_is_jumping = False
-jump_force = -20  # Скорость прыжка
-jump_count = 0  # Счётчик прыжков
-
 # Скорость прокрутки фона и препятствий
-scroll_speed = 5
+scroll_speed = 8
 
 # Пол
 floor_height = 50
 floor_rect = pygame.Rect(0, HEIGHT - floor_height, WIDTH, floor_height)
 
-# препятствия
-obstacle_width = 30
-obstacle_height = 50
-obstacle_gap = 200
-obstacle_min_height = 30
-obstacle_max_height = 70
-obstacle_min_gap = 250
-obstacles = []
-
-
-def generate_obstacle():
-    # Генерация препятствий (пока генерация, потом список препятствий будет)
-    y_pos = random.randint(obstacle_min_height, obstacle_max_height)
-
-    if len(obstacles) == 0:
-        x_pos = WIDTH + random.randint(100, 200)
-    else:
-        x_pos = obstacles[-1].right + random.randint(obstacle_min_gap, obstacle_min_gap + 100)
-
-    obstacle_rect = pygame.Rect(x_pos, HEIGHT - y_pos - floor_height, obstacle_width, y_pos)
-    obstacles.append(obstacle_rect)
-
-
-# Генерация начальных препятствий
-for _ in range(3):
-    generate_obstacle()
+# Препятствия
+obstacle_gap = 200  # Фиксированный интервал между препятствиями
 
 # Таймер
 clock = pygame.time.Clock()
 
-# Переменная для отслеживания игры (запущена или нет)
-is_running = True
-game_over = False
-score = 0
-
-# Текст для отображения
+# Шрифт для отображения текста
 font = pygame.font.Font(None, 36)
 
 
-def draw_cube():
-    # рисует куб-персонажа
-    pygame.draw.rect(screen, YELLOW, (cube_x, cube_y, cube_size, cube_size))
+class Cube:
+    def __init__(self, x, y, size):
+        self.x = x
+        self.y = y
+        self.size = size
+        self.vel_y = 0
+        self.gravity = 1.5
+        self.is_jumping = False
+        self.jump_force = -25  # Увеличение высоты прыжка
+        self.jump_count = 0
+
+    def draw(self):
+        pygame.draw.rect(screen, YELLOW, (self.x, self.y, self.size, self.size))
+
+    def handle_jump(self):
+        if not self.is_jumping:
+            self.vel_y = self.jump_force
+            self.is_jumping = True
+            self.jump_count += 1
+
+    def apply_gravity(self):
+        self.vel_y += self.gravity
+        self.y += self.vel_y
+        if self.y + self.size > HEIGHT - floor_height:
+            self.y = HEIGHT - self.size - floor_height
+            self.vel_y = 0
+            self.is_jumping = False
+            self.jump_count = 0
+
+    def get_rect(self):
+        return pygame.Rect(self.x, self.y, self.size, self.size)
 
 
-def draw_floor():
-    """Рисует пол."""
-    pygame.draw.rect(screen, GRAY, floor_rect)
+class Obstacle:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, HEIGHT - y - floor_height, width, height)
+        self.passed = False
+
+    def draw(self):
+        pygame.draw.rect(screen, WHITE, self.rect)
+
+    def move(self):
+        self.rect.x -= scroll_speed
+
+    def get_rect(self):
+        return self.rect
 
 
-def draw_obstacles():
-    # рисует препятствие
-    for obstacle in obstacles:
-        pygame.draw.rect(screen, WHITE, obstacle)
+class Game:
+    def __init__(self):
+        self.is_running = True
+        self.game_over = False
+        self.game_win = False
+        self.score = 0
+        self.cube = Cube(150, HEIGHT - 30 - 50, 30)
+        self.obstacles = []
+        self.list_of_obstacles = [
+            {"x": 600, "y": 30, "width": 30, "height": 30},
+            {"x": 850, "y": 30, "width": 30, "height": 30},
+            {"x": 1100, "y": 30, "width": 30, "height": 30},
+            {"x": 1300, "y": 30, "width": 30, "height": 30},
+            {"x": 1600, "y": 30, "width": 30, "height": 30},
+            {"x": 1800, "y": 30, "width": 30, "height": 30},
+        ]
+        self.create_obstacles()
+
+    def create_obstacles(self):
+        self.obstacles = []
+        x_pos = 0
+        for obstacle_data in self.list_of_obstacles:
+            obstacle = Obstacle(x_pos + obstacle_data["x"], obstacle_data["y"], obstacle_data["width"],
+                                obstacle_data["height"])
+            self.obstacles.append(obstacle)
+            x_pos += obstacle_data["width"] + obstacle_gap
+
+    def check_collision(self):
+        cube_rect = self.cube.get_rect()
+        for obstacle in self.obstacles:
+            if cube_rect.colliderect(obstacle.get_rect()):
+                return True
+        return False
+
+    def scroll_background(self):
+        for obstacle in self.obstacles:
+            obstacle.move()
+            if obstacle.rect.right < self.cube.x and not obstacle.passed:
+                self.score += 1
+                obstacle.passed = True
+        self.obstacles = [obstacle for obstacle in self.obstacles if obstacle.rect.right > 0]
+        if not self.obstacles:
+            self.game_win = True
+
+    def run(self):
+        while self.is_running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.is_running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE and not self.game_over and not self.game_win:
+                        if self.cube.jump_count < 2:
+                            self.cube.handle_jump()
+
+            if self.check_collision() and not self.game_over and not self.game_win:
+                self.game_over = True
+
+            screen.fill(BLACK)
+            pygame.draw.rect(screen, GRAY, floor_rect)
+            for obstacle in self.obstacles:
+                obstacle.draw()
+            self.cube.draw()
+
+            if not self.game_over and not self.game_win:
+                self.cube.apply_gravity()
+                self.scroll_background()
+
+            if self.game_over:
+                self.show_game_over_text()
+            elif self.game_win:
+                self.show_game_win_text()
+
+            pygame.display.flip()
+            clock.tick(60)
+
+    def show_game_over_text(self):
+        text = font.render(f"Game Over. Score: {self.score}", True, WHITE)
+        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        screen.blit(text, text_rect)
+        button_text = font.render("New Game", True, BLACK)
+        button_rect = button_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+        pygame.draw.rect(screen, GREEN, button_rect.inflate(20, 20))
+        screen.blit(button_text, button_rect)
+        mouse_pos = pygame.mouse.get_pos()
+        if pygame.mouse.get_pressed()[0] and button_rect.collidepoint(mouse_pos):
+            self.restart_game()
+
+    def show_game_win_text(self):
+        text = font.render(f"You Win! Score: {self.score}", True, WHITE)
+        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        screen.blit(text, text_rect)
+        button_text = font.render("New Game", True, BLACK)
+        button_rect = button_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+        pygame.draw.rect(screen, GREEN, button_rect.inflate(20, 20))
+        screen.blit(button_text, button_rect)
+        mouse_pos = pygame.mouse.get_pos()
+        if pygame.mouse.get_pressed()[0] and button_rect.collidepoint(mouse_pos):
+            self.restart_game()
+
+    def restart_game(self):
+        self.game_over = False
+        self.game_win = False
+        self.score = 0
+        self.cube = Cube(150, HEIGHT - 30 - 50, 30)
+        self.create_obstacles()
 
 
-def check_collision():
-    # Проверяет столкновение куба с препятствием
-    cube_rect = pygame.Rect(cube_x, cube_y, cube_size, cube_size)
-    for obstacle in obstacles:
-        if cube_rect.colliderect(obstacle):
-            return True
-    return False
-
-
-# Прокручивает препятствия и увеличивает счёт
-def scroll_background():
-    global obstacles, score
-    for obstacle in obstacles:
-        obstacle.move_ip(-scroll_speed, 0)
-
-    # Увеличить счёт, если препятствие прошло
-    for obstacle in obstacles:
-        if obstacle.right < cube_x and obstacle.right > cube_x - scroll_speed:
-            score += 1
-
-    # Удаление препятствий, которые вышли за экран
-    obstacles = [obstacle for obstacle in obstacles if obstacle.right > 0]
-
-    # Генерация новых препятствий, если их меньше 3
-    if len(obstacles) < 3 and len(obstacles) > 0 and obstacles[-1].right < WIDTH - obstacle_gap:
-        generate_obstacle()
-    elif len(obstacles) == 0:
-        generate_obstacle()
-
-
-# Управляет прыжком куба
-def handle_jump():
-    global cube_vel_y, cube_is_jumping, jump_count
-
-    if not cube_is_jumping:
-        cube_vel_y = jump_force
-        cube_is_jumping = True
-        jump_count += 1  # Увеличиваем счётчик прыжков
-
-
-def apply_gravity():
-    """Применяет гравитацию к кубу."""
-    global cube_vel_y, cube_y, cube_is_jumping, jump_count
-    cube_vel_y += cube_gravity
-    cube_y += cube_vel_y
-
-    # Ограничение высоты прыжка
-    if cube_y + cube_size > HEIGHT - floor_height:
-        cube_y = HEIGHT - cube_size - floor_height
-        cube_vel_y = 0
-        cube_is_jumping = False
-        jump_count = 0  # Сбрасываем счётчик прыжков на земле
-
-
-def show_game_over_text():
-    """Показывает надпись Game Over и кнопку перезапуска."""
-    text = font.render(f"Game Over. Score: {score}", True, WHITE)
-    text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
-    screen.blit(text, text_rect)
-
-    # New game button
-    button_text = font.render("New Game", True, BLACK)
-    button_rect = button_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
-    pygame.draw.rect(screen, GREEN, button_rect.inflate(20, 20))  # draw the green rectangle
-    screen.blit(button_text, button_rect)
-
-    mouse_pos = pygame.mouse.get_pos()
-    if pygame.mouse.get_pressed()[0] and button_rect.collidepoint(mouse_pos):
-        restart_game()
-
-
-def restart_game():
-    """Resets game variables"""
-    global game_over, obstacles, cube_x, cube_y, cube_vel_y, score
-
-    game_over = False
-    obstacles = []
-    for _ in range(3):
-        generate_obstacle()
-    cube_x = 50
-    cube_y = HEIGHT - cube_size - 50
-    cube_vel_y = 0
-    score = 0
-
-
-# Основной игровой цикл
-while is_running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            is_running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and not game_over:
-                if jump_count < 2:
-                    handle_jump()
-
-    # Проверка столкновений
-    if check_collision() and not game_over:
-        game_over = True
-
-    # Обновление экрана
-    screen.fill(BLACK)
-    draw_floor()
-    draw_obstacles()
-    draw_cube()
-
-    # Применение гравитации
-    if not game_over:
-        apply_gravity()
-        scroll_background()
-
-    if game_over:
-        show_game_over_text()
-
-    pygame.display.flip()
-
-    clock.tick(60)
-
-pygame.quit()
-sys.exit()
+if __name__ == '__main__':
+    game = Game()
+    game.run()
+    pygame.quit()
+    sys.exit()
