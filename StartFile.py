@@ -48,7 +48,10 @@ standard_spike_image = pygame.image.load("images/standard_spike.png").convert_al
 little_spike_image = pygame.image.load('images/little_spike.png').convert_alpha()
 block_image = pygame.image.load("images/block_1.png").convert_alpha()
 spikes_image = pygame.image.load('images/spikes.png').convert_alpha()
-background_image = pygame.image.load("images/background1.png").convert()
+background1_image = pygame.image.load("images/background1.png").convert()
+background2_image = pygame.image.load("images/background2.png").convert()
+background3_image = pygame.image.load("images/background3.png").convert()
+backgrounds = [background1_image, background2_image, background3_image]
 
 # Загрузка мелодий
 pygame.mixer.init()
@@ -60,6 +63,8 @@ music_lose = pygame.mixer.Sound(os.path.join("music", "lose_music.mp3"))
 
 music_win_flag = True
 musics = [music1, music2, music3]
+
+username = ''
 
 
 def blitrotate(surf, image, pos, originpos: tuple, angle: float):
@@ -97,10 +102,7 @@ class CubeFragment:
         self.alpha = 255  # Прозрачность
         self.gravity = 0.75
 
-    def update(self):
-        """
-        Обновляет состояние осколка.
-        """
+    def update(self):  # Обновляет состояние осколка.
         self.rect.x += self.vel_x
         self.rect.y += self.vel_y
         self.vel_y += self.gravity  # применяем гравитацию
@@ -111,19 +113,13 @@ class CubeFragment:
         if self.alpha < 0:
             self.alpha = 0
 
-    def draw(self):
-        """
-        Отрисовывает осколок на экране.
-        """
+    def draw(self):  # Отрисовывает осколок на экране.
         if self.alpha > 0:
             blitrotate(screen, self.image, self.rect.center, (self.image.get_width() / 2, self.image.get_height() / 2),
                        self.angle)
             self.image.set_alpha(self.alpha)
 
-    def split_image(self, image, parts_x, parts_y):
-        """
-        Разбивает изображение на несколько частей.
-        """
+    def split_image(self, image, parts_x, parts_y):  # Разбивает изображение на несколько частей.
         width = image.get_width()
         height = image.get_height()
         part_width = width // parts_x
@@ -287,29 +283,43 @@ class Login:
         password = ""
         input_active = [True, False]  # [username_active, password_active]
         error_message1 = ""
-        error_message2 = ''
-        error_message3 = ''
-        error_message4 = ''
         success_message = ''
 
         while True:
             screen.fill(BLACK)
+
+            button_text = font.render("Add user", True, BLACK)
+            button_rect = button_text.get_rect(center=(WIDTH // 2 - 75, HEIGHT // 2 + 75))
+            pygame.draw.rect(screen, GREEN, button_rect.inflate(20, 20))
+            button2_text = font.render("Log in", True, BLACK)
+            text_x = WIDTH // 2 + 65 - button2_text.get_width() // 2
+            text_y = HEIGHT // 2 + 75 - button2_text.get_height() // 2
+            text_w = button2_text.get_width()
+            text_h = button2_text.get_height()
+            button_2_rect = pygame.Rect(text_x - 10, text_y - 10, text_w + 20, text_h + 20)
+            pygame.draw.rect(screen, (0, 255, 0), button_2_rect)
+            screen.blit(button_text, button_rect)
+            screen.blit(button2_text, (text_x, text_y))
+
+            button3_text = font.render("Try another user", True, BLACK)
+            text_x = WIDTH // 2 - 13 - button3_text.get_width() // 2
+            text_y = HEIGHT // 2 + 135 - button3_text.get_height() // 2
+            text_w = button3_text.get_width()
+            text_h = button3_text.get_height()
+            button_3_rect = pygame.Rect(text_x - 10, text_y - 10, text_w + 20, text_h + 20)
+            pygame.draw.rect(screen, (0, 255, 0), button_3_rect)
+            screen.blit(button3_text, (text_x, text_y))
+
             title_text = font.render("Login", True, WHITE)
             username_text = font.render("Username: " + username, True, WHITE)
             password_text = font.render("Password: " + "*" * len(password), True, WHITE)
             error_text1 = font.render(error_message1, True, YELLOW)
-            error_text2 = font.render(error_message2, True, GREEN)
-            error_text3 = font.render(error_message3, True, GREEN)
-            error_text4 = font.render(error_message4, True, GREEN)
             success_text = font.render(success_message, True, WHITE)
 
             screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, HEIGHT // 2 - 100))
             screen.blit(username_text, (WIDTH // 2 - username_text.get_width() // 2, HEIGHT // 2 - 50))
             screen.blit(password_text, (WIDTH // 2 - password_text.get_width() // 2, HEIGHT // 2))
-            screen.blit(error_text1, (WIDTH // 2 - error_text1.get_width() // 2, HEIGHT // 2 + 50))
-            screen.blit(error_text2, (100, HEIGHT // 2 + 100))
-            screen.blit(error_text3, (100, HEIGHT // 2 + 150))
-            screen.blit(error_text4, (100, HEIGHT // 2 + 200))
+            screen.blit(error_text1, (WIDTH // 2 - error_text1.get_width() // 2, HEIGHT // 2 - 200))
             screen.blit(success_text, (WIDTH // 2 - error_text1.get_width() // 2, HEIGHT // 2 + 50))
 
             pygame.display.flip()
@@ -321,44 +331,58 @@ class Login:
                 con = sqlite3.connect('Game Users.db')
                 cur = con.cursor()
                 if event.type == pygame.KEYDOWN:
-                    if input_active[0]:  # Username input
-                        if event.key == pygame.K_RETURN:
-                            input_active[0] = False
-                            input_active[1] = True
-                        elif event.key == pygame.K_BACKSPACE:
-                            username = username[:-1]
-                        else:
-                            username += event.unicode
-                    elif input_active[1]:  # Password input
-                        if event.key == pygame.K_RETURN:
-                            logins = [login[0] for login in cur.execute("SELECT login FROM users").fetchall()]
-                            if username in logins:
-                                if password == cur.execute("SELECT password FROM users WHERE login = ?",
-                                                           (username,)).fetchone()[0]:
-
-                                    con.commit()
-                                    con.close()
-                                    return username  # Successful login
-                                else:
-                                    error_message1 = 'Invalid password'
-                                    error_message2 = "Instruction:"
-                                    error_message3 = "Try another password: P"
-                                    error_message4 = "Try existed user: TAB"
-                                    input_active = [False, False]
+                    if event.key == pygame.K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
+                    else:
+                        if input_active[0]:  # Username input
+                            if event.key == pygame.K_RETURN:
+                                input_active[0] = False
+                                input_active[1] = True
+                            elif event.key == pygame.K_BACKSPACE:
+                                username = username[:-1]
                             else:
-                                error_message1 = "Invalid credentials"
-                                error_message2 = "Instruction:"
-                                error_message3 = "Add new user: CAPSLOCK"
-                                error_message4 = "Try existed user: TAB"
+                                username += event.unicode
+                        elif input_active[1]:  # Password input
+                            if event.key == pygame.K_BACKSPACE:
+                                password = password[:-1]
+                            else:
+                                password += event.unicode
+
+                mouse_pos = pygame.mouse.get_pos()
+                if pygame.mouse.get_pressed()[0] == 1 and button_2_rect.collidepoint(mouse_pos):
+                    if username and password:
+                        logins = [login[0] for login in cur.execute("SELECT login FROM users").fetchall()]
+                        if username in logins:
+                            if password == cur.execute("SELECT password FROM users WHERE login = ?",
+                                                       (username,)).fetchone()[0]:
+
+                                con.commit()
+                                con.close()
+                                return username  # Successful login
+                            else:
+                                error_message1 = 'Invalid password'
                                 input_active = [False, False]
-
-                        elif event.key == pygame.K_BACKSPACE:
-                            password = password[:-1]
                         else:
-                            password += event.unicode
+                            error_message1 = f"No user with login: {username}"
+                            input_active = [False, False]
+                    else:
+                        error_message1 = 'Fields "Username" and "Password" can not be empty!'
 
-                    elif input_active == [False, False]:
-                        if event.key == pygame.K_CAPSLOCK:
+
+                elif pygame.mouse.get_pressed()[0] == 1 and button_3_rect.collidepoint(mouse_pos):
+                    username = ''
+                    password = ''
+                    error_message1 = ''
+                    input_active = [True, False]
+                elif pygame.mouse.get_pressed()[0] == 1 and button_rect.collidepoint(mouse_pos):
+                    logins = [login[0] for login in cur.execute("SELECT login FROM users").fetchall()]
+                    if username in logins:
+                        if password == cur.execute("SELECT password FROM users WHERE login = ?",
+                                                   (username,)).fetchone()[0]:
+                            error_message1 = 'User is already exist!'
+                    else:
+                        if username and password:
                             if self.check_password(password) == 'Done!':
                                 cur.execute(
                                     'INSERT INTO users(login, password, record1, record2, record3) VALUES(?, ?, ?, ?, ?)',
@@ -370,30 +394,16 @@ class Login:
                                 error_message1 = self.check_password(password)
                                 password = ''
                                 input_active = [False, True]
-
-                        if event.key == pygame.K_TAB:
-                            username = ''
-                            password = ''
-                            error_message3 = ''
-                            error_message4 = ''
-                            error_message1 = ''
-                            error_message2 = ''
-                            input_active = [True, False]
-
-                        if event.key == pygame.K_p:
-                            password = ''
-                            input_active = [False, True]
-
-                con.commit()
-                con.close()
+                        else:
+                            error_message1 = 'Fields "Username" and "Password" can not be empty!'
 
 
 class Game:
     global level, music_win, music1, music2, music3, music_lose
-    def __init__(self, record, username):
-        self.record = list(record)
+
+    def __init__(self):
+        self.record = list(get_record())
         self.start = False
-        self.username = username
         self.is_running = True  # Флаг, указывающий, работает ли игра
         self.game_over = False  # Флаг, указывающий, проиграна ли игра
         self.game_win = False  # Флаг, указывающий, выиграна ли игра
@@ -407,7 +417,7 @@ class Game:
         self.attempt_count = 1  # Счетчик попыток
         self.attempt_text = None  # Для отображения текста попытки
         self.high_score = 0  # Переменная для хранения рекорда
-        self.total_path_length = 8566  # Общая длина пути в пикселях
+        self.total_path_length = [8566, 6460, 6290]  # Общая длина пути в пикселях
         self.new_high_score = False  # Флаг для отображения текста рекорда
 
     def load_level_from_csv(self, level):  # Загружает данные уровня из CSV-файла
@@ -483,8 +493,8 @@ class Game:
         return False  # Нет столкновений
 
     def show_new_high_score_text(self):
-        text = font.render(f"Новый рекорд: {self.score}%", True, WHITE)
-        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        text = font.render(f"New record: {self.score}%", True, WHITE)
+        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 200))
         screen.blit(text, text_rect)
         pygame.display.flip()
         pygame.time.wait(1500)  # Задержка 2 секунды (2000 миллисекунд)
@@ -522,11 +532,11 @@ class Game:
             self.game_win = True  # Игра выйграна
 
         # Рассчитываем пройденное расстояние
-        self.score = int((self.total_path_length - furthest_obstacle_x) / self.total_path_length * 100)
+        self.score = int((self.total_path_length[level] - furthest_obstacle_x) / self.total_path_length[level] * 100)
 
     def draw_stats(self):
         global level, add_color
-        lenghts = [0.39, 0.829, 0.62]
+        lenghts = [0.39, 0.63, 0.62]
         lenght = lenghts[level]
         progress_colors = [pygame.Color("red"), pygame.Color("orange"), pygame.Color("yellow"),
                            pygame.Color("darkolivegreen2"), pygame.Color("lightgreen"),
@@ -542,70 +552,73 @@ class Game:
         rect(screen, WHITE, outline_rect, 3, 4)
 
     def run(self):  # Основной игровой цикл
-        global add_color, musics
+        global add_color, musics, level, username
         pygame.init()
         musics[level].play()
         button_text = font.render("Menu", True, WHITE)
-        button_rect = button_text.get_rect(center=(100, 50))
+        button_rect = pygame.Rect(690, 25, 720, 45)
         while self.is_running:  # Пока игра запущена
             for event in pygame.event.get():  # Обрабатываем события
-
                 if event.type == pygame.QUIT:  # Если нажали на закрытие окна
                     self.is_running = False  # Останавливаем игру
                 if event.type == pygame.KEYDOWN:  # Если нажали на клавишу
+                    if event.type == pygame.K_ESCAPE:
+                        self.is_running = False
                     if event.key == pygame.K_SPACE:  # Если нажали на пробел
                         self.space_pressed = True
                 if event.type == pygame.KEYUP:  # Если отпустили клавишу
                     if event.key == pygame.K_SPACE:  # Если отпустили пробел
                         self.space_pressed = False
-                if event.type == pygame.MOUSEBUTTONDOWN:  # Обрабатываем нажатия мыши
-                    if button_rect.collidepoint(event.pos):
-                        add_color = 0
-                        self.start_screen()  # Вызываем функцию стартового экрана
-                        self.restart_game()  # Перезапускаем игру
 
-            if self.space_pressed and not self.game_over and not self.game_win:  # прыгаем если зажат пробел
-                self.cube.handle_jump()
-            screen.blit(background_image, (0, 0))  # Отрисовываем фоновое изображение
-            pygame.draw.rect(screen, BLACK, floor_rect)  # Рисуем пол
+                mouse_pos = pygame.mouse.get_pos()
+                if pygame.mouse.get_pressed()[0] and button_rect.collidepoint(mouse_pos):
+                    self.game_win = False
+                    self.is_running = False
+                    self.start = True
+                    musics[level].stop()
+                    music_win.stop()
+                    start_settings()
+            if self.is_running:
+                if self.space_pressed and not self.game_over and not self.game_win:  # прыгаем если зажат пробел
+                    self.cube.handle_jump()
+                screen.blit(backgrounds[level], (0, 0))  # Отрисовываем фоновое изображение
+                pygame.draw.rect(screen, BLACK, floor_rect)  # Рисуем пол
 
-            # Рисуем линию пола
-            pygame.draw.line(screen, WHITE, (0, HEIGHT - floor_height), (4000, HEIGHT - floor_height), 1)
-            screen.blit(button_text, (700, 35))
-            for obstacle in self.obstacles:  # Отрисовываем все препятствия
-                obstacle.draw()
-            if self.cube.is_active:
-                self.cube.draw()  # Рисуем куб, если он активен
-            for fragment in self.cube_fragments:
-                fragment.draw()  # Отрисовываем осколки
-                fragment.update()  # Обновляем положение осколков
-            if self.attempt_text:  # Если текст есть, отрисовываем
-                self.attempt_text.draw()
-                self.attempt_text.move()
-            self.cube_fragments = [fragment for fragment in self.cube_fragments if fragment.alpha > 0]
-
-            if not self.game_over and not self.game_win and not self.start:  # Если игра не проиграна и не выиграна
+                # Рисуем линию пола
+                pygame.draw.line(screen, WHITE, (0, HEIGHT - floor_height), (4000, HEIGHT - floor_height), 1)
+                screen.blit(button_text, (700, 35))
+                for obstacle in self.obstacles:  # Отрисовываем все препятствия
+                    obstacle.draw()
                 if self.cube.is_active:
-                    self.cube.apply_gravity()
-                    if not self.check_collision():
-                        self.scroll_background()
-                elif not self.cube_fragments:  # Проверяем, что нет осколков
-                    if self.new_high_score:  # Если установлен флаг рекорда
-                        self.show_new_high_score_text()  # показываем текст
-                        self.new_high_score = False  # Сбрасываем флаг
-                    self.restart_game()
-                    add_color = 0
-            elif self.start:
-                self.start_screen()
-                add_color = 0
-            elif self.game_win:  # Если игра выиграна
-                self.show_game_win_text()  # Показываем текст выигрыша
-                add_color = 0
+                    self.cube.draw()  # Рисуем куб, если он активен
+                for fragment in self.cube_fragments:
+                    fragment.draw()  # Отрисовываем осколки
+                    fragment.update()  # Обновляем положение осколков
+                if self.attempt_text:  # Если текст есть, отрисовываем
+                    self.attempt_text.draw()
+                    self.attempt_text.move()
+                self.cube_fragments = [fragment for fragment in self.cube_fragments if fragment.alpha > 0]
 
-            pygame.display.flip()
-            clock.tick(60)
-        # self.is_record()
-        # musics[level].stop()
+                if not self.game_over and not self.game_win and not self.start:  # Если игра не проиграна и не выиграна
+                    if self.cube.is_active:
+                        self.cube.apply_gravity()
+                        if not self.check_collision():
+                            self.scroll_background()
+                    elif not self.cube_fragments:  # Проверяем, что нет осколков
+                        if self.new_high_score:  # Если установлен флаг рекорда
+                            self.show_new_high_score_text()  # показываем текст
+                            self.new_high_score = False  # Сбрасываем флаг
+                        self.restart_game()
+                        add_color = 0
+                elif self.start:
+                    self.start_screen()
+                    add_color = 0
+                elif self.game_win:  # Если игра выиграна
+                    self.is_record()
+                    self.show_game_win_text()  # Показываем текст выигрыша
+                    add_color = 0
+                pygame.display.flip()
+                clock.tick(60)
 
     def is_record(self):
         if self.score > self.record[level]:
@@ -613,20 +626,20 @@ class Game:
             con = sqlite3.connect('Game Users.db')
             cur = con.cursor()
             if level == 0:
-                cur.execute("UPDATE users SET record1 = ? WHERE login = ?", (self.score, self.username))
+                cur.execute("UPDATE users SET record1 = ? WHERE login = ?", (self.score, username))
             elif level == 1:
-                cur.execute("UPDATE users SET record2 = ? WHERE login = ?", (self.score, self.username))
+                cur.execute("UPDATE users SET record2 = ? WHERE login = ?", (self.score, username))
             elif level == 2:
-                cur.execute("UPDATE users SET record3 = ? WHERE login = ?", (self.score, self.username))
+                cur.execute("UPDATE users SET record3 = ? WHERE login = ?", (self.score, username))
             con.commit()
             con.close()
 
     def show_game_win_text(self):
-        global music_win_flag, music_win, musics, level
+        global music_win_flag, music_win, musics, level, username
         musics[level].stop()
         music_win.play()
         screen.fill(BLACK)
-        text = font.render(f"Вы выиграли! Прогресс: {self.score}%", True, WHITE)
+        text = font.render(f"You win! Progress: {self.score}%", True, WHITE)
         text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
         screen.blit(text, text_rect)
         button_text = font.render("New Game", True, BLACK)
@@ -634,8 +647,12 @@ class Game:
         pygame.draw.rect(screen, GREEN, button_rect.inflate(20, 20))
         screen.blit(button_text, button_rect)
         button2_text = font.render("Choose Level", True, BLACK)
-        button2_rect = button_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
-        pygame.draw.rect(screen, GREEN, button2_rect.inflate(60, 20))
+        text_x = WIDTH // 2 + 13 - button2_text.get_width() // 2
+        text_y = HEIGHT // 2 + 10 - button2_text.get_height() // 2
+        text_w = button2_text.get_width()
+        text_h = button2_text.get_height()
+        button2_rect = pygame.Rect(text_x - 17, text_y - 15, text_w + 10, text_h + 10)
+        pygame.draw.rect(screen, GREEN, button2_rect)
         screen.blit(button2_text, button2_rect)
         mouse_pos = pygame.mouse.get_pos()
         if pygame.mouse.get_pressed()[0] and button_rect.collidepoint(mouse_pos):
@@ -647,22 +664,37 @@ class Game:
             self.game_win = False
             self.start = True
             music_win.stop()
-            start_settings(self.username, self.record)
+            start_settings()
 
     def start_screen(self):
+        global username
+        record = get_record()
         screen.fill(BLACK)
+
+        button_4_text = font.render("Log out", True, BLACK)
+        text_x = WIDTH - 50 - button_4_text.get_width() // 2
+        text_y = HEIGHT - 30 - button_4_text.get_height() // 2
+        text_w = button_4_text.get_width()
+        text_h = button_4_text.get_height()
+        button_4_rect = pygame.Rect(text_x - 20, text_y - 20, text_w + 10, text_h + 10)
+        pygame.draw.rect(screen, (0, 255, 0), button_4_rect)
+        screen.blit(button_4_text, button_4_rect)
+
         welcome = font.render(f'Welcome to Pygame Geometry Lite!'.upper(), True, GREEN)
         choose = font.render(f'Choose level by keypad:'.upper(), True, WHITE)
         username_text = font.render(username, True, WHITE)
         record_text = font.render(f"Best score: {record[level]}".upper(), True, WHITE)
         controls = font.render('Instruction:'.upper(), True, GREEN)
-        jump = font.render('jump: Space'.upper(), True, GREEN)
+        jump = font.render('start/jump: Space'.upper(), True, GREEN)
         exit_text = font.render('exit: Esc'.upper(), True, GREEN)
         chosen_level = font.render(f"Level {level + 1}".upper(), True, WHITE)
         screen.blits([(welcome, (180, 100)), [choose, (100, 150)], [record_text, (100, 275)], [controls, (100, 400)],
                       [jump, (100, 450)], [exit_text, (100, 500)], [chosen_level, (100, 200)],
                       [username_text, (750 - username_text.get_width(), 35)]])
         pygame.display.flip()
+        mouse_pos = pygame.mouse.get_pos()
+        if pygame.mouse.get_pressed()[0] and button_4_rect.collidepoint(mouse_pos):
+            starting()
 
     def restart_game(self):
         musics[level].stop()
@@ -678,11 +710,11 @@ class Game:
             self.attempt_text = None
         else:
             self.attempt_count += 1
-            self.attempt_text = AttemptText(f'Попытка: {self.attempt_count}', 200, 200)
+            self.attempt_text = AttemptText(f'Attempt: {self.attempt_count}', 200, 200)
 
 
-def start_settings(username, record):
-    # pygame.init()
+def start_settings():
+    pygame.init()
     global level
     waiting = True
     flag = True
@@ -703,24 +735,33 @@ def start_settings(username, record):
                     level = 1
                 if event.key == pygame.K_3:
                     level = 2
-        Game(record, username).start_screen()
+        Game().start_screen()
         pygame.display.flip()
     if flag:
-        Game(record, username).run()
+        Game().run()
     pygame.quit()
 
 
-if __name__ == '__main__':
-    # pygame.init()
-    username = Login().draw_login_screen()
+def get_record():
+    global username
     con = sqlite3.connect("Game Users.db")
     cur = con.cursor()
     record = \
         cur.execute("SELECT record1, record2, record3 FROM users WHERE login = ?", (username,)).fetchall()[
             0]
-    # print(record)
     con.commit()
     con.close()
-    start_settings(username, record)
+    return record
+
+
+def starting():
+    global username
+    pygame.init()
+    username = Login().draw_login_screen()
+    start_settings()
     pygame.quit()
     sys.exit()
+
+
+if __name__ == '__main__':
+    starting()
