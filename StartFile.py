@@ -48,7 +48,10 @@ standard_spike_image = pygame.image.load("images/standard_spike.png").convert_al
 little_spike_image = pygame.image.load('images/little_spike.png').convert_alpha()
 block_image = pygame.image.load("images/block_1.png").convert_alpha()
 spikes_image = pygame.image.load('images/spikes.png').convert_alpha()
-background_image = pygame.image.load("images/background1.png").convert()
+background1_image = pygame.image.load("images/background1.png").convert()
+background2_image = pygame.image.load("images/background2.png").convert()
+background3_image = pygame.image.load("images/background3.png").convert()
+backgrounds = [background1_image, background2_image, background3_image]
 
 # Загрузка мелодий
 pygame.mixer.init()
@@ -390,8 +393,9 @@ class Login:
 
 class Game:
     global level, music_win, music1, music2, music3, music_lose
-    def __init__(self, record, username):
-        self.record = list(record)
+
+    def __init__(self, username):
+        self.record = list(get_record())
         self.start = False
         self.username = username
         self.is_running = True  # Флаг, указывающий, работает ли игра
@@ -407,7 +411,7 @@ class Game:
         self.attempt_count = 1  # Счетчик попыток
         self.attempt_text = None  # Для отображения текста попытки
         self.high_score = 0  # Переменная для хранения рекорда
-        self.total_path_length = 8566  # Общая длина пути в пикселях
+        self.total_path_length = [8566, 6460, 6290]  # Общая длина пути в пикселях
         self.new_high_score = False  # Флаг для отображения текста рекорда
 
     def load_level_from_csv(self, level):  # Загружает данные уровня из CSV-файла
@@ -522,11 +526,11 @@ class Game:
             self.game_win = True  # Игра выйграна
 
         # Рассчитываем пройденное расстояние
-        self.score = int((self.total_path_length - furthest_obstacle_x) / self.total_path_length * 100)
+        self.score = int((self.total_path_length[level] - furthest_obstacle_x) / self.total_path_length[level] * 100)
 
     def draw_stats(self):
         global level, add_color
-        lenghts = [0.39, 0.829, 0.62]
+        lenghts = [0.39, 0.63, 0.62]
         lenght = lenghts[level]
         progress_colors = [pygame.Color("red"), pygame.Color("orange"), pygame.Color("yellow"),
                            pygame.Color("darkolivegreen2"), pygame.Color("lightgreen"),
@@ -542,31 +546,34 @@ class Game:
         rect(screen, WHITE, outline_rect, 3, 4)
 
     def run(self):  # Основной игровой цикл
-        global add_color, musics
+        global add_color, musics, level
         pygame.init()
         musics[level].play()
         button_text = font.render("Menu", True, WHITE)
         button_rect = button_text.get_rect(center=(100, 50))
         while self.is_running:  # Пока игра запущена
             for event in pygame.event.get():  # Обрабатываем события
-
                 if event.type == pygame.QUIT:  # Если нажали на закрытие окна
                     self.is_running = False  # Останавливаем игру
                 if event.type == pygame.KEYDOWN:  # Если нажали на клавишу
+                    if event.type == pygame.K_ESCAPE:
+                        self.is_running = False
                     if event.key == pygame.K_SPACE:  # Если нажали на пробел
                         self.space_pressed = True
                 if event.type == pygame.KEYUP:  # Если отпустили клавишу
                     if event.key == pygame.K_SPACE:  # Если отпустили пробел
                         self.space_pressed = False
-                if event.type == pygame.MOUSEBUTTONDOWN:  # Обрабатываем нажатия мыши
-                    if button_rect.collidepoint(event.pos):
-                        add_color = 0
-                        self.start_screen()  # Вызываем функцию стартового экрана
-                        self.restart_game()  # Перезапускаем игру
+            mouse_pos = pygame.mouse.get_pos()
+            if pygame.mouse.get_pressed()[0] and button_rect.collidepoint(mouse_pos):
+                self.game_win = False
+                self.is_running = False
+                self.start = True
+                music_win.stop()
+                start_settings(self.username)
 
             if self.space_pressed and not self.game_over and not self.game_win:  # прыгаем если зажат пробел
                 self.cube.handle_jump()
-            screen.blit(background_image, (0, 0))  # Отрисовываем фоновое изображение
+            screen.blit(backgrounds[level], (0, 0))  # Отрисовываем фоновое изображение
             pygame.draw.rect(screen, BLACK, floor_rect)  # Рисуем пол
 
             # Рисуем линию пола
@@ -599,11 +606,13 @@ class Game:
                 self.start_screen()
                 add_color = 0
             elif self.game_win:  # Если игра выиграна
+                self.is_record()
                 self.show_game_win_text()  # Показываем текст выигрыша
                 add_color = 0
 
             pygame.display.flip()
             clock.tick(60)
+        # pygame.quit()
         # self.is_record()
         # musics[level].stop()
 
@@ -647,9 +656,10 @@ class Game:
             self.game_win = False
             self.start = True
             music_win.stop()
-            start_settings(self.username, self.record)
+            start_settings(self.username)
 
     def start_screen(self):
+        record = get_record()
         screen.fill(BLACK)
         welcome = font.render(f'Welcome to Pygame Geometry Lite!'.upper(), True, GREEN)
         choose = font.render(f'Choose level by keypad:'.upper(), True, WHITE)
@@ -681,8 +691,8 @@ class Game:
             self.attempt_text = AttemptText(f'Попытка: {self.attempt_count}', 200, 200)
 
 
-def start_settings(username, record):
-    # pygame.init()
+def start_settings(username):
+    pygame.init()
     global level
     waiting = True
     flag = True
@@ -703,16 +713,14 @@ def start_settings(username, record):
                     level = 1
                 if event.key == pygame.K_3:
                     level = 2
-        Game(record, username).start_screen()
+        Game(username).start_screen()
         pygame.display.flip()
     if flag:
-        Game(record, username).run()
+        Game(username).run()
     pygame.quit()
 
 
-if __name__ == '__main__':
-    # pygame.init()
-    username = Login().draw_login_screen()
+def get_record():
     con = sqlite3.connect("Game Users.db")
     cur = con.cursor()
     record = \
@@ -721,6 +729,12 @@ if __name__ == '__main__':
     # print(record)
     con.commit()
     con.close()
-    start_settings(username, record)
+    return record
+
+
+if __name__ == '__main__':
+    pygame.init()
+    username = Login().draw_login_screen()
+    start_settings(username)
     pygame.quit()
     sys.exit()
