@@ -561,9 +561,11 @@ class Game:
             for event in pygame.event.get():  # Обрабатываем события
                 if event.type == pygame.QUIT:  # Если нажали на закрытие окна
                     self.is_running = False  # Останавливаем игру
+                    break
                 if event.type == pygame.KEYDOWN:  # Если нажали на клавишу
                     if event.type == pygame.K_ESCAPE:
                         self.is_running = False
+                        break
                     if event.key == pygame.K_SPACE:  # Если нажали на пробел
                         self.space_pressed = True
                 if event.type == pygame.KEYUP:  # Если отпустили клавишу
@@ -578,7 +580,9 @@ class Game:
                     musics[level].stop()
                     music_win.stop()
                     start_settings()
+                    break
             if self.is_running:
+                pygame.init()
                 if self.space_pressed and not self.game_over and not self.game_win:  # прыгаем если зажат пробел
                     self.cube.handle_jump()
                 screen.blit(backgrounds[level], (0, 0))  # Отрисовываем фоновое изображение
